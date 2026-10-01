@@ -3,9 +3,9 @@ name: estimate-risk
 description: >
   Assess risk level (0/1/2/3) for OLS Jira stories using the team's risk rubric.
   Fetches the story, applies the decision tree, sets the Effort field, and
-  adds the assessment as a comment. Use for on-demand assessment or
-  after creating a new story.
-argument-hint: "OLS-1234 [OLS-1235 ...]"
+  adds the assessment as a comment unless --no-comment is passed. Use for
+  on-demand assessment or after creating a new story.
+argument-hint: "[--no-comment] OLS-1234 [OLS-1235 ...]"
 disable-model-invocation: true
 ---
 
@@ -22,7 +22,14 @@ assessment comment.
 ```
 /estimate-risk OLS-1234
 /estimate-risk OLS-1234 OLS-1235 OLS-1236
+/estimate-risk --no-comment OLS-1234 OLS-1235 OLS-1236
 ```
+
+`--no-comment` sets the Effort field but skips the assessment comment.
+Use it for bulk runs, where one comment per issue would flood watchers
+with notifications. The rationale is then reported only in the chat
+summary, so prefer the default for one-off assessments — the comment is
+the only durable record of *why* a level was chosen.
 
 Also invoked automatically after creating a new OLS story.
 Works for Stories, Bugs, Tasks, Weaknesses, and Vulnerabilities.
@@ -46,10 +53,14 @@ You MUST read this file before assessing. It contains:
 Read risk-level-rubric.md
 ```
 
-### Step 2: Parse story keys from arguments
+### Step 2: Parse arguments
 
-Extract all `OLS-XXXX` keys from the skill arguments. If no arguments
+Extract all `OLS-XXXX` keys from the skill arguments. If no keys are
 provided, ask the user for story key(s).
+
+Check for the `--no-comment` flag anywhere in the arguments. When
+present, skip step 3d for every story in the run. The flag is not a
+story key — do not treat it as one.
 
 ### Step 3: For each story
 
@@ -97,6 +108,8 @@ within seconds, so writing there has no effect.
 
 #### 3d. Add risk assessment comment
 
+Skip this step entirely when `--no-comment` was passed.
+
 Use `mcp__plugin_atlassian_atlassian__addCommentToJiraIssue` with:
 - `cloudId`: `redhat.atlassian.net`
 - `issueIdOrKey`: the story key
@@ -110,6 +123,10 @@ Do NOT modify the description field.
 For each story, report:
 - Story key and summary
 - Risk level and one-line rationale
+
+Under `--no-comment` this report is the only record of the rationale,
+so always include it, and state in the summary that comments were
+skipped.
 
 ## Jira Field Reference
 
